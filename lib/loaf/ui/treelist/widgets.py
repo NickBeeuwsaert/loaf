@@ -13,19 +13,22 @@ class TreeWidgetMixin:
 
 
 class ConversationWidget(TreeWidgetMixin, TreeWidget):
-    def __init__(self, node):
-        super().__init__(node)
-        self._w = urwid.AttrWrap(self._w, None, 'selected')
-
     def selectable(self):
         return True
 
     def mouse_event(self, size, event, widget, x, y, focus):
         if event == 'mouse press':
-            self.node.parent.value.switch_conversation(self.value)
+            self.node.parent.value.active_conversation = self.value
 
     def get_display_text(self):
-        return self.value.name
+        parent_value = self.node.parent.value
+        value = self.node.value
+
+        text = f'#{self.value.name}'
+        if parent_value.active_conversation is value:
+            return ('selected', text)
+        else:
+            return text
 
 
 class TeamWidget(TreeWidgetMixin, TreeWidget):

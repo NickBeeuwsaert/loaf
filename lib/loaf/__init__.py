@@ -20,20 +20,11 @@ def JSONType(value):
 
 async def run(config):
     overview = TeamOverview()
+    widget = ui.LoafWidget(overview)
 
     for team in config.get('team', []):
         client = WebClient(team['token'], loop=loop)
         await overview.load_team(client)
-
-    widget = ui.LoafWidget(overview)
-
-    def send_message():
-        coro = overview.send_message(widget.message.edit_text)
-
-        if coro:
-            loop.create_task(coro)
-
-    urwid.connect_signal(widget.message, 'send', send_message)
 
     return widget
 
@@ -53,7 +44,7 @@ def main():
 
     urwid.MainLoop(widget, [
         ('selected', 'default, standout', 'default'),
-        ('bold', 'default, bold', 'default')
+        ('username', 'default, bold', 'default')
     ], event_loop=urwid.AsyncioEventLoop(loop=loop)).run()
 
 

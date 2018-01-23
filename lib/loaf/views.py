@@ -1,6 +1,12 @@
 import asyncio
-from .event_emitter import EventEmitter, fires
+import operator
+from functools import partial
+from datetime import datetime, timedelta
+
+
+from .event_emitter import EventEmitter, emit
 from .decorator import reify
+from .slack_api import RTMError
 
 
 class User:
@@ -25,32 +31,50 @@ class Conversation(EventEmitter):
 
     def add_message(self, message):
         user = message['user']
-        message = Message(
-            message['ts'],
-            self.team.users[user],
-            message['text']
-        )
+        getter = operator.itemgetter('ts', 'user', 'text')
+        ts, user, text = getter(message)
+        message = Message(ts, self.team.users[user], text)
         self.messages.append(message)
-        self.fire('message', self, message)
+        self.emit('message', self, message)
+
+    async def load_messages(self):
+        oldest = (datetime.now() - timedelta(weeks=1)).timestamp()
+
+        messages = []
+        async for message in self.team.web_api.conversations.history(
+            self.id,
+            oldest=str(oldest)
+        ):
+            messages.append(message)
+        
+        for message in reversed(messages):
+            self.add_message(message)
 
     @reify
     def messages(self):
+        asyncio.ensure_future(self.load_messages())
         return []
 
     async def send_message(self, message):
-        response = await self.team.rtm_api.send({
-            'type': 'message',
-            'channel': self.id,
-            'text': message
-        })
-        self.add_message({
-            'user': self.team.me.id,
-            **response
-        })
+        try:
+            response = await self.team.rtm_api.send({
+                'type': 'message',
+                'channel': self.id,
+                'text': message
+            })
+        except RTMError as e:
+            # TODO: Error handling here
+            # Show the user a message or something
+            pass
+        else:
+            self.add_message({
+                'user': self.team.me.id,
+                **response
+            })
 
 
 class Team(EventEmitter):
-    active_conversation = None
+    _active_conversation = None
 
     def __init__(self, id, name, me, *, web_api, rtm_api):
         self.id = id
@@ -60,25 +84,33 @@ class Team(EventEmitter):
         self.web_api = web_api
         self.rtm_api = rtm_api
 
+    @property
+    def active_conversation(self):
+        return self._active_conversation
+
+    @active_conversation.setter
+    def active_conversation(self, conversation):
+        self._active_conversation = conversation
+        self.emit('switch_conversation', self, conversation)
+
     def switch_conversation(self, conversation):
         self.active_conversation = conversation
-        self.fire('switch_conversation', self, conversation)
 
-    def on_message(self, conversation, message):
-        self.fire('message', self, conversation, message)
-
-    @fires('conversations_changed')
+    @emit('conversations_changed')
     def add_conversation(self, conversation):
-        conversation.on('message', self.on_message)
+        @conversation.on('message')
+        def handle_message(conversation, message):
+            self.emit('message', self, conversation, message)
+
         self.conversations[conversation.id] = conversation
         if self.active_conversation is None:
             self.active_conversation = conversation
 
-    @fires('users_changed')
+    @emit('users_changed')
     def add_user(self, user):
         self.users[user.id] = user
 
-    def on_receive_message(self, message):
+    def handle_message(self, message):
         channel = message['channel']
         try:
             conversation = self.conversations[channel]
@@ -103,12 +135,12 @@ class Team(EventEmitter):
         return self.active_conversation.send_message(message)
 
     @reify
-    @fires('conversations_changed')
+    @emit('conversations_changed')
     def conversations(self):
         return {}
 
     @reify
-    @fires('users_changed')
+    @emit('users_changed')
     def users(self):
         return {
             self.me.id: self.me
@@ -116,27 +148,30 @@ class Team(EventEmitter):
 
 
 class TeamOverview(EventEmitter):
-    active_team = None
+    _active_team = None
 
     @reify
     def teams(self):
         return {}
 
-    def _on_switch_team(self, team, convo):
-        self.active_team = team
-        self.fire('switch_team', team)
+    @property
+    def active_team(self):
+        return self._active_team
 
-    def _on_message(self, team, conversation, message):
-        self.fire('message', team, conversation, message)
+    @active_team.setter
+    def active_team(self, team):
+        self._active_team = team
+        self.emit('switch_team', team)
 
-    def _on_conversations_changed(self):
-        self.fire('teams_changed')
-
-    @fires('teams_changed')
+    @emit('teams_changed')
     def add_team(self, team):
-        team.on('conversations_changed', self._on_conversations_changed)
-        team.on('switch_conversation', self._on_switch_team)
-        team.on('message', self._on_message)
+        team.on('conversations_changed', lambda: self.emit('teams_changed'))
+        team.on('message', partial(self.emit, 'message'))
+
+        @team.on('switch_conversation')
+        def switch_team(team, _):
+            self.active_team = team
+
         self.teams[team.id] = team
         if self.active_team is None:
             self.active_team = team
@@ -152,16 +187,16 @@ class TeamOverview(EventEmitter):
             client.rtm.connect(),
             client.auth.test()
         )
-        me = User(team_info['user_id'], team_info['user'])
+        getter = operator.itemgetter('user_id', 'user', 'team_id', 'team')
+        user_id, user, team_id, team = getter(team_info)
+
         team = Team(
-            team_info['team_id'],
-            team_info['team'],
-            me=me,
-            web_api=client,
-            rtm_api=rtm_client
+            team_id, team, User(user_id, user),
+            web_api=client, rtm_api=rtm_client
         )
         await asyncio.gather(team.load_converstions(), team.load_users())
-        rtm_client.on('message', team.on_receive_message)
+
+        rtm_client.on('message', team.handle_message)
         self.add_team(team)
 
         return team

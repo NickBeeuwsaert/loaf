@@ -7,6 +7,10 @@ from ...event_emitter import EventEmitter
 _counter = itertools.count(1)
 
 
+class RTMError(Exception):
+    pass
+
+
 class RTMClient(EventEmitter):
     def __init__(self, ws, *, loop=None):
         if loop is None:
@@ -25,9 +29,12 @@ class RTMClient(EventEmitter):
             try:
                 future = self._futures.pop(message['reply_to'])
             except KeyError:
-                self.fire(message['type'], message)
+                self.emit(message['type'], message)
             else:
-                future.set_result(message)
+                if message['ok'] is False:
+                    future.set_exception(RTMError(message['error']))
+                else:
+                    future.set_result(message)
 
     async def send(self, message):
         id = next(_counter)

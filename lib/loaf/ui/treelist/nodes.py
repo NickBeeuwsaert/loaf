@@ -20,7 +20,7 @@ class NodeMixin:
 
 
 class ConversationNode(NodeMixin, TreeNode):
-    def load_widget(self):
+    def get_widget(self):
         return ConversationWidget(self)
 
 
