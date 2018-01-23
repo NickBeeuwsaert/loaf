@@ -148,15 +148,14 @@ class TeamOverview(EventEmitter):
         return self.active_team.send_message(message)
 
     async def load_team(self, client):
-        rtm_client, team_info, my_info = await asyncio.gather(
+        rtm_client, team_info = await asyncio.gather(
             client.rtm.connect(),
-            client.team.info(),
             client.auth.test()
         )
-        me = User(my_info['user_id'], my_info['user'])
+        me = User(team_info['user_id'], team_info['user'])
         team = Team(
-            team_info['id'],
-            team_info['name'],
+            team_info['team_id'],
+            team_info['team'],
             me=me,
             web_api=client,
             rtm_api=rtm_client
