@@ -31,3 +31,8 @@ Why not
     ```
     $ venv/bin/loaf
     ```
+
+## Notes
+The Slack API wrapper is extremely bare bones, since I only impemented what I needed. Existing Asyncio aware API wrappers like 'slacker' weren't used since I wanted to write my own wrapper
+
+This is the first application I've written using urwid, so pull requests are welcomed to help improve the code.
