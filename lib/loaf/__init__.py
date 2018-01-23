@@ -7,7 +7,7 @@ import json
 import urwid
 
 from loaf.slack_api import WebClient
-from loaf.views import TeamOverview
+from loaf.models import TeamOverview
 from loaf import ui
 
 loop = asyncio.get_event_loop()
