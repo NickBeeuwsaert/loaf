@@ -12,9 +12,9 @@ Why not
 
     ```
     {
-        'client': {
-            'id': 'CLIENT_ID',
-            'secret': 'CLIENT_SECRET'
+        "client": {
+            "id": "CLIENT_ID",
+            "secret": "CLIENT_SECRET"
         }
     }
     ```
