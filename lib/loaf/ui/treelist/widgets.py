@@ -24,7 +24,7 @@ class ConversationWidget(TreeWidgetMixin, TreeWidget):
         parent_value = self.node.parent.value
         value = self.node.value
 
-        text = f'#{self.value.name}'
+        text = f'#{value.name}'
         if parent_value.active_conversation is value:
             return ('selected', text)
         else:
@@ -33,7 +33,8 @@ class ConversationWidget(TreeWidgetMixin, TreeWidget):
 
 class TeamWidget(TreeWidgetMixin, TreeWidget):
     def get_display_text(self):
-        return self.value.name
+        value = self.value
+        return value.alias or value.name
 
 
 class TeamOverviewWidget(TreeWidgetMixin, TreeWidget):

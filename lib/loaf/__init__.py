@@ -3,11 +3,12 @@ import asyncio
 from pprint import pprint
 import itertools
 import json
+import operator
 
 import urwid
 
 from loaf.slack_api import WebClient
-from loaf.models import TeamOverview
+from loaf.models import TeamOverview, Team, User
 from loaf import ui
 
 loop = asyncio.get_event_loop()
@@ -22,9 +23,26 @@ async def run(config):
     overview = TeamOverview()
     widget = ui.LoafWidget(overview)
 
-    for team in config.get('team', []):
-        client = WebClient(team['token'], loop=loop)
-        await overview.load_team(client)
+    for team_config in config.get('team', []):
+        client = WebClient(team_config['token'], loop=loop)
+
+        rtm_client, team_info = await asyncio.gather(
+            client.rtm.connect(),
+            client.auth.test()
+        )
+        getter = operator.itemgetter('user_id', 'user', 'team_id', 'team')
+        user_id, user, team_id, team = getter(team_info)
+
+        team = Team(
+            team_id, team, User(user_id, user),
+            web_api=client, rtm_api=rtm_client,
+            alias=team_config.get('alias', None)
+        )
+        await asyncio.gather(team.load_converstions(), team.load_users())
+
+        rtm_client.on('message', team.handle_message)
+
+        overview.add_team(team)
 
     return widget
 

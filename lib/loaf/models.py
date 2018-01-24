@@ -84,10 +84,15 @@ class Conversation(EventEmitter):
 class Team(EventEmitter):
     _active_conversation = None
 
-    def __init__(self, id, name, me, *, web_api, rtm_api):
+    def __init__(
+            self, id, name, me, *,
+            web_api, rtm_api,
+            alias=None
+        ):
         self.id = id
         self.name = name
         self.me = me
+        self.alias = alias
 
         self.web_api = web_api
         self.rtm_api = rtm_api
@@ -189,22 +194,3 @@ class TeamOverview(EventEmitter):
             return
 
         return self.active_team.send_message(message)
-
-    async def load_team(self, client):
-        rtm_client, team_info = await asyncio.gather(
-            client.rtm.connect(),
-            client.auth.test()
-        )
-        getter = operator.itemgetter('user_id', 'user', 'team_id', 'team')
-        user_id, user, team_id, team = getter(team_info)
-
-        team = Team(
-            team_id, team, User(user_id, user),
-            web_api=client, rtm_api=rtm_client
-        )
-        await asyncio.gather(team.load_converstions(), team.load_users())
-
-        rtm_client.on('message', team.handle_message)
-        self.add_team(team)
-
-        return team
