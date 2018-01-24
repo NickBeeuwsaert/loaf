@@ -30,10 +30,18 @@ class Conversation(EventEmitter):
         self.team = team
 
     def add_message(self, message):
-        user = message['user']
-        getter = operator.itemgetter('ts', 'user', 'text')
-        ts, user, text = getter(message)
-        message = Message(ts, self.team.users[user], text)
+        try:
+            user = message['user']
+        except KeyError:
+            user = User(None, message['username'])
+        else:
+            user = self.team.users[user]
+
+        message = Message(
+            message['ts'],
+            user,
+            message['text']
+        )
         self.messages.append(message)
         self.emit('message', self, message)
 
