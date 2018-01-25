@@ -1,6 +1,8 @@
 # Loaf
 Loaf is a slack client written in python
 
+![screenshot](screenshot.png)
+
 ## Why?
 Why not
 
