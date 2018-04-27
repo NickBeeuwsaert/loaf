@@ -19,9 +19,7 @@ setup(
     },
     install_requires=[
         'urwid',
-        'aiohttp',
-        # For Authenticating with slack
-        'pyramid', 'requests'
+        'aiohttp'
     ],
     extras_require={
         'test': [],
