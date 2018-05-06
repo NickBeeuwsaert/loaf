@@ -1,16 +1,18 @@
 import urwid
 import asyncio
+from datetime import datetime
 
 from ..decorator import reify
 from .treelist.nodes import TeamOverviewNode
 
 
 class MessageWidget(urwid.WidgetWrap):
-    def __init__(self, user, message):
+    def __init__(self, ts, user, message):
         super().__init__(urwid.AttrMap(
             urwid.Columns([
+                ('weight', 10, urwid.Text(('timestamp', str(datetime.fromtimestamp(float(ts) // 1))))),
                 ('weight', 10, urwid.Text(('username', user.name))),
-                ('weight', 90, urwid.Text(message))
+                ('weight', 80, urwid.Text(message))
             ], dividechars=2),
             None, 'selected'
         ))
@@ -46,7 +48,7 @@ class LoafWidget(urwid.WidgetWrap):
                 f'#{team.active_conversation.name}'
             )
             self.messages.body[:] = [
-                MessageWidget(msg.user, msg.message)
+                MessageWidget(msg.ts, msg.user, msg.message)
                 for msg in team.active_conversation.messages
             ]
 
@@ -60,7 +62,7 @@ class LoafWidget(urwid.WidgetWrap):
                 return
 
             self.messages.body.append(
-                MessageWidget(message.user, message.message)
+                MessageWidget(message.ts, message.user, message.message)
             )
 
             # For now just snap the messages to the bottom of the
