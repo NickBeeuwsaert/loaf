@@ -10,8 +10,9 @@ class MessageWidget(urwid.WidgetWrap):
     def __init__(self, ts, user, message):
         super().__init__(urwid.AttrMap(
             urwid.Columns([
-                ('weight', 10, urwid.Text(('username', user.name + " (" + str(datetime.fromtimestamp(float(ts) // 1)) + ")"))),
-                ('weight', 90, urwid.Text(message))
+                ('weight', 10, urwid.Text(('timestamp', str(datetime.fromtimestamp(float(ts) // 1))))),
+                ('weight', 10, urwid.Text(('username', user.name))),
+                ('weight', 80, urwid.Text(message))
             ], dividechars=2),
             None, 'selected'
         ))
