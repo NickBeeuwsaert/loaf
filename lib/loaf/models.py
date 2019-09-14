@@ -46,7 +46,7 @@ class Conversation(EventEmitter):
         self.emit('message', self, message)
 
     async def load_messages(self):
-        oldest = (datetime.now() - timedelta(weeks=1)).timestamp()
+        oldest = (datetime.now() - timedelta(weeks=self.team.duration)).timestamp()
 
         messages = []
         async for message in self.team.web_api.conversations.history(
@@ -87,12 +87,13 @@ class Team(EventEmitter):
     def __init__(
             self, id, name, me, *,
             web_api, rtm_api,
-            alias=None
+            alias=None, duration=1
         ):
         self.id = id
         self.name = name
         self.me = me
         self.alias = alias
+        self.duration = duration
 
         self.web_api = web_api
         self.rtm_api = rtm_api
