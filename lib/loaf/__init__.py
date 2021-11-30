@@ -1,9 +1,11 @@
 import argparse
 import asyncio
 from pprint import pprint
+from xdg.BaseDirectory import xdg_config_home
 import itertools
 import json
 import operator
+import os
 
 import urwid
 
@@ -54,7 +56,7 @@ def main():
     parser.add_argument(
         '--config', '-c',
         metavar='CONFIG',
-        default='config.json',
+        default=os.path.join(xdg_config_home, 'loaf', 'config.json'),
         type=JSONType
     )
     args = parser.parse_args()
