@@ -1,5 +1,7 @@
 import asyncio
+import json
 import operator
+import os
 from functools import partial
 from datetime import datetime, timedelta
 
@@ -49,13 +51,40 @@ class Conversation(EventEmitter):
         oldest = (datetime.now() - timedelta(weeks=self.team.duration)).timestamp()
 
         messages = []
-        async for message in self.team.web_api.conversations.history(
-            self.id,
-            oldest=str(oldest)
-        ):
+        should_write = False
+        if self.team.sync_dir:
+            try:
+                # If the files exist, we assume they go back to the beginning of time
+                logfile = open(os.path.join(self.team.sync_dir, self.id + '.json'), 'r')
+                logged_history = json.load(logfile)
+                logfile.close()
+
+                for message in logged_history['messages']:
+                    if float(message['ts']) > oldest:
+                        messages.append(message)
+                        oldest = float(message['ts'])
+            except:
+                pass
+
+        # Make sure we do not fetch the last one again
+        oldest += 1
+        async for message in self.team.web_api.conversations.history(self.id, oldest=str(oldest)):
+            should_write = True
             messages.append(message)
-        
-        for message in reversed(messages):
+
+        if should_write:
+            # They appear to be sorted in chunks... is this due to the async?
+            messages = sorted(messages, key=lambda m: float(m['ts']))
+        if self.team.sync_dir and should_write:
+            try:
+                # We should look into streaming methods of just writing the new ones
+                logfile = open(os.path.join(str(self.team.sync_dir), str(self.id) + '.json'), 'w')
+                json.dump({'messages': messages}, logfile, indent='    ')
+                logfile.close()
+            except:
+                pass
+
+        for message in messages:
             self.add_message(message)
 
     @reify
@@ -87,13 +116,15 @@ class Team(EventEmitter):
     def __init__(
             self, id, name, me, *,
             web_api, rtm_api,
-            alias=None, duration=1
+            alias=None, duration=1,
+            sync_dir=None
         ):
         self.id = id
         self.name = name
         self.me = me
         self.alias = alias
         self.duration = duration
+        self.sync_dir = sync_dir
 
         self.web_api = web_api
         self.rtm_api = rtm_api

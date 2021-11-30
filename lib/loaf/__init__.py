@@ -37,7 +37,8 @@ async def run(config):
             team_id, team, User(user_id, user),
             web_api=client, rtm_api=rtm_client,
             alias=team_config.get('alias', None),
-            duration=int(team_config.get('history_weeks', 1))
+            duration=int(team_config.get('history_weeks', 1)),
+            sync_dir=team_config.get('sync_dir', None)
         )
         await asyncio.gather(team.load_converstions(), team.load_users())
 
