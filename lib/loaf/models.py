@@ -47,15 +47,14 @@ class Conversation(EventEmitter):
         self.messages.append(message)
         self.emit('message', self, message)
 
-    async def load_messages(self):
+    async def load_messages(self, sync_file):
         oldest = (datetime.now() - timedelta(weeks=self.team.duration)).timestamp()
 
         messages = []
-        should_write = False
-        if self.team.sync_dir:
+        if sync_file:
             try:
                 # If the files exist, we assume they go back to the beginning of time
-                logfile = open(os.path.join(self.team.sync_dir, self.id + '.json'), 'r')
+                logfile = open(sync_file, 'r')
                 logged_history = json.load(logfile)
                 logfile.close()
 
@@ -68,17 +67,20 @@ class Conversation(EventEmitter):
 
         # Make sure we do not fetch the last one again
         oldest += 1
-        async for message in self.team.web_api.conversations.history(self.id, oldest=str(oldest)):
-            should_write = True
-            messages.append(message)
+        new_messages = []
+        async for message in self.team.web_api.conversations.history(
+            self.id,
+            oldest=str(oldest)
+        ):
+            new_messages.append(message)
 
-        if should_write:
-            # They appear to be sorted in chunks... is this due to the async?
-            messages = sorted(messages, key=lambda m: float(m['ts']))
-        if self.team.sync_dir and should_write:
+        # They appear to be sorted in chunks... is this due to the async?
+        new_messages = sorted(new_messages, key=lambda m: float(m['ts']))
+        messages += new_messages
+        if self.team.sync_dir and len(new_messages) > 0:
             try:
                 # We should look into streaming methods of just writing the new ones
-                logfile = open(os.path.join(str(self.team.sync_dir), str(self.id) + '.json'), 'w')
+                logfile = open(sync_file, 'w')
                 json.dump({'messages': messages}, logfile, indent='    ')
                 logfile.close()
             except:
@@ -89,7 +91,10 @@ class Conversation(EventEmitter):
 
     @reify
     def messages(self):
-        asyncio.ensure_future(self.load_messages())
+        sync_file = None
+        if self.team.sync_dir:
+            sync_file = os.path.join(self.team.sync_dir, self.id + '.json')
+        asyncio.ensure_future(self.load_messages(sync_file))
         return []
 
     async def send_message(self, message):
