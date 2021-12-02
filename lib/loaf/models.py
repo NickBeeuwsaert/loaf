@@ -51,19 +51,17 @@ class Conversation(EventEmitter):
         oldest = (datetime.now() - timedelta(weeks=self.team.duration)).timestamp()
 
         messages = []
-        if sync_file:
-            try:
-                # If the files exist, we assume they go back to the beginning of time
-                logfile = open(sync_file, 'r')
-                logged_history = json.load(logfile)
-                logfile.close()
-
-                for message in logged_history['messages']:
-                    if float(message['ts']) > oldest:
-                        messages.append(message)
-                        oldest = float(message['ts'])
-            except:
-                pass
+        try:
+            # If the files exist, we assume they go back to the beginning of time
+            logfile = open(sync_file, 'r')
+            for line in logfile:
+                message = json.loads(line)
+                if float(message['ts']) > oldest:
+                    messages.append(message)
+                    oldest = float(message['ts'])
+            logfile.close()
+        except:
+            pass
 
         # Make sure we do not fetch the last one again
         oldest += 1
@@ -76,16 +74,17 @@ class Conversation(EventEmitter):
 
         # They appear to be sorted in chunks... is this due to the async?
         new_messages = sorted(new_messages, key=lambda m: float(m['ts']))
-        messages += new_messages
-        if self.team.sync_dir and len(new_messages) > 0:
+        if sync_file and len(new_messages) > 0:
             try:
-                # We should look into streaming methods of just writing the new ones
-                logfile = open(sync_file, 'w')
-                json.dump({'messages': messages}, logfile, indent='    ')
+                logfile = open(sync_file, 'a')
+                for message in new_messages:
+                    line = json.dumps(message)
+                    logfile.write(line + '\n')
                 logfile.close()
             except:
                 pass
 
+        messages += new_messages
         for message in messages:
             self.add_message(message)
 
@@ -93,7 +92,7 @@ class Conversation(EventEmitter):
     def messages(self):
         sync_file = None
         if self.team.sync_dir:
-            sync_file = os.path.join(self.team.sync_dir, self.id + '.json')
+            sync_file = os.path.join(self.team.sync_dir, self.id)
         asyncio.ensure_future(self.load_messages(sync_file))
         return []
 
