@@ -34,10 +34,12 @@ class Conversation(EventEmitter):
     def add_message(self, message):
         try:
             user = message['user']
-        except KeyError:
-            user = User(None, message['username'])
-        else:
             user = self.team.users[user]
+        except KeyError:
+            try:
+                user = User(None, message['username'])
+            except KeyError:
+                user = User(None, "Unknown")
 
         message = Message(
             message['ts'],
