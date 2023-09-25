@@ -176,6 +176,8 @@ class Team(EventEmitter):
                 conversation_name = conversation['name']
             except KeyError:
                 conversation_name = "Unknown"
+                if conversation['is_im']:
+                    conversation_name = "IM: " + self.users[conversation['user']].name
             self.add_conversation(Conversation(
                 self, conversation['id'], conversation_name
             ))
