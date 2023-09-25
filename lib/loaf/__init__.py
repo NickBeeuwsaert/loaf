@@ -64,11 +64,12 @@ def main():
     loop = asyncio.get_event_loop()
     widget = loop.run_until_complete(run(args.config))
 
-    urwid.MainLoop(widget, [
+    widget.main_loop = urwid.MainLoop(widget, [
         ('selected', 'default, standout', 'default'),
         ('username', 'default, bold', 'default'),
         ('timestamp', 'default, underline', 'default')
-    ], event_loop=urwid.AsyncioEventLoop(loop=loop)).run()
+    ], event_loop=urwid.AsyncioEventLoop(loop=loop))
+    widget.main_loop.run()
 
 
 if __name__ == '__main__':

@@ -31,6 +31,7 @@ class MessageEdit(urwid.Edit):
 
 class LoafWidget(urwid.WidgetWrap):
     def __init__(self, team_overview):
+        self.main_loop = None
         self.team_overview = team_overview
 
         team_overview.on('teams_changed', lambda: urwid.emit_signal(
@@ -68,6 +69,8 @@ class LoafWidget(urwid.WidgetWrap):
             # For now just snap the messages to the bottom of the
             # listbox
             self.messages.set_focus(len(self.messages.body) - 1)
+            if self.main_loop != None:
+                asyncio.get_event_loop().call_soon(self.main_loop.draw_screen)
 
         super().__init__(self.widget)
 
