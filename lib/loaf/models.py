@@ -109,11 +109,6 @@ class Conversation(EventEmitter):
             # TODO: Error handling here
             # Show the user a message or something
             pass
-        else:
-            self.add_message({
-                'user': self.team.me.id,
-                **response
-            })
 
 
 class Team(EventEmitter):
