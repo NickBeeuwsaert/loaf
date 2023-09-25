@@ -172,8 +172,12 @@ class Team(EventEmitter):
 
     async def load_converstions(self):
         async for conversation in self.web_api.conversations.list():
+            try:
+                conversation_name = conversation['name']
+            except KeyError:
+                conversation_name = "Unknown"
             self.add_conversation(Conversation(
-                self, conversation['id'], conversation['name']
+                self, conversation['id'], conversation_name
             ))
 
     async def load_users(self):

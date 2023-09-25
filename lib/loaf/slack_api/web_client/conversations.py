@@ -2,7 +2,7 @@ class Conversations:
     def __init__(self, client):
         self.client = client
 
-    async def list(self, exclude_archived=None, limit=None, types=None):
+    async def list(self, exclude_archived=None, limit=None, types='public_channel,private_channel,mpim,im'):
         if isinstance(types, (list, tuple)):
             types = ', '.join(types)
 
