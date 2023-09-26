@@ -79,8 +79,25 @@ class Conversation(EventEmitter):
         ):
             new_messages.append(message)
 
+        i = 0
         # They appear to be sorted in chunks... is this due to the async?
         new_messages = sorted(new_messages, key=lambda m: float(m['ts']))
+        while i < len(new_messages):
+            message = new_messages[i]
+            if 'reply_count' in message:
+                replies = []
+                async for reply in self.team.web_api.conversations.replies(
+                    self.id,
+                    message['ts']
+                ):
+                    replies.append(reply)
+                replies = sorted(replies, key=lambda m: float(m['ts']))
+                new_messages = new_messages[:i + 1] + replies + new_messages[i + 1:]
+                i += len(replies) + 1
+            else:
+                i += 1
+
+        # Now that messages are sorted with replies interspersed, we can finally log them
         if sync_file and len(new_messages) > 0:
             try:
                 logfile = open(sync_file, 'a')
@@ -94,12 +111,6 @@ class Conversation(EventEmitter):
         messages += new_messages
         for message in messages:
             self.add_message(message)
-            if 'reply_count' in message:
-                async for reply in self.team.web_api.conversations.replies(
-                    self.id,
-                    message['ts']
-                ):
-                    self.add_message(reply)
 
     @reify
     def messages(self):
