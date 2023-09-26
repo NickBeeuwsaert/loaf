@@ -34,7 +34,7 @@ class Conversations:
 
     async def replies(
         self, channel, ts,
-        cursor=None, include_all_metadata=None, inclusive=None, latest=None, limit=None, oldest=None
+        inclusive=None, latest=None, limit=None, oldest=None
     ):
         async for response in self.client.paginate_api_call(
             'GET', 'conversations.replies', params=dict(

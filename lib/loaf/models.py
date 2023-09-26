@@ -94,15 +94,12 @@ class Conversation(EventEmitter):
         messages += new_messages
         for message in messages:
             self.add_message(message)
-            try:
-                if message['reply_count'] > 0:
-                    async for reply in self.team.web_api.conversations.replies(
-                        self.id,
-                        message['ts']
-                    ):
-                        self.add_message(reply)
-            except:
-                pass
+            if 'reply_count' in message:
+                async for reply in self.team.web_api.conversations.replies(
+                    self.id,
+                    message['ts']
+                ):
+                    self.add_message(reply)
 
     @reify
     def messages(self):
