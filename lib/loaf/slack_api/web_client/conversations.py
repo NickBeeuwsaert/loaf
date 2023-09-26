@@ -32,6 +32,23 @@ class Conversations:
             for message in response['messages']:
                 yield message
 
+    async def replies(
+        self, channel, ts,
+        cursor=None, include_all_metadata=None, inclusive=None, latest=None, limit=None, oldest=None
+    ):
+        async for response in self.client.paginate_api_call(
+            'GET', 'conversations.replies', params=dict(
+                channel=channel,
+                ts=ts,
+                inclusive=inclusive,
+                latest=latest,
+                limit=limit,
+                oldest=oldest
+            )
+        ):
+            for message in response['messages']:
+                yield message
+
     async def info(self, channel, include_locale=None):
         response = await self.client.api_call(
             'GET', 'conversations.info', params=dict(
@@ -62,8 +79,6 @@ class Conversations:
     def open(self): pass
 
     def rename(self): pass
-
-    def replies(self): pass
 
     def set_purpose(self): pass
 

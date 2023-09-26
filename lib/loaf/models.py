@@ -18,10 +18,11 @@ class User:
 
 
 class Message:
-    def __init__(self, ts, user, message):
+    def __init__(self, ts, user, message, is_reply):
         self.ts = ts
         self.user = user
         self.message = message
+        self.is_reply = is_reply
 
 
 class Conversation(EventEmitter):
@@ -41,10 +42,14 @@ class Conversation(EventEmitter):
             except KeyError:
                 user = User(None, "Unknown")
 
+        is_reply = False
+        if 'parent_user_id' in message:
+            is_reply = True
         message = Message(
             message['ts'],
             user,
-            message['text']
+            message['text'],
+            is_reply
         )
         self.messages.append(message)
         self.emit('message', self, message)
@@ -89,6 +94,15 @@ class Conversation(EventEmitter):
         messages += new_messages
         for message in messages:
             self.add_message(message)
+            try:
+                if message['reply_count'] > 0:
+                    async for reply in self.team.web_api.conversations.replies(
+                        self.id,
+                        message['ts']
+                    ):
+                        self.add_message(reply)
+            except:
+                pass
 
     @reify
     def messages(self):

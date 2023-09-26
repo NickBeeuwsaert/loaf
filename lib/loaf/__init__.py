@@ -67,7 +67,9 @@ def main():
     widget.main_loop = urwid.MainLoop(widget, [
         ('selected', 'default, standout', 'default'),
         ('username', 'default, bold', 'default'),
-        ('timestamp', 'default, underline', 'default')
+        ('timestamp', 'default, underline', 'default'),
+        ('normal', 'default', 'default'),
+        ('reply', 'yellow', 'default')
     ], event_loop=urwid.AsyncioEventLoop(loop=loop))
     widget.main_loop.run()
 
